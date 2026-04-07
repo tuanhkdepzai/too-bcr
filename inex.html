@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MATRIX 10.1 - SIÊU CẤP INFINITY</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* RESET & BASE */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: #000; overflow: hidden; height: 100vh; width: 100vw; color: #fff; }
+        
+        /* GAME LAYER */
+        .game-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        /* TOOL CONTAINER */
+        #dragTool {
+            position: fixed; top: 15%; left: 15px; z-index: 9999;
+            display: flex; align-items: flex-start; touch-action: none;
+            will-change: transform;
+        }
+        
+        .robot-img { 
+            width: 70px; filter: drop-shadow(0 0 15px #00f2ff); 
+            animation: float 3s infinite ease-in-out; cursor: grab; 
+            transition: transform 0.2s; 
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .content-box { 
+            background: rgba(10, 10, 25, 0.95); padding: 18px; border-radius: 20px; 
+            color: #fff; margin-left: 15px; min-width: 370px; 
+            border: 2px solid #00f2ff; box-shadow: 0 0 40px rgba(0, 242, 255, 0.2); 
+            backdrop-filter: blur(20px); transition: all 0.4s;
+        }
+
+        .header-info { 
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 1px solid rgba(0, 242, 255, 0.2); padding-bottom: 12px; margin-bottom: 15px; 
+        }
+        select { 
+            background: #1a2236; color: #00f2ff; border: 1px solid #00f2ff; 
+            border-radius: 8px; padding: 4px 10px; font-size: 12px; outline: none; cursor: pointer;
+        }
+
+        .prediction-panel { 
+            background: rgba(255,255,255,0.03); border-radius: 15px; padding: 18px; 
+            margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.08); 
+        }
+        #prediction_val { 
+            font-size: 38px; text-align: center; font-weight: 900; 
+            padding: 12px 0; letter-spacing: 4px; min-height: 70px; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        .matrix-status { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+        .status-item { 
+            background: rgba(0,242,255,0.05); padding: 8px 12px; border-radius: 10px;
+            font-size: 11px; border-left: 3px solid #00f2ff;
+        }
+        .status-label { display: block; color: #64748b; margin-bottom: 2px; text-transform: uppercase; font-size: 9px; }
+        .status-val { font-weight: bold; color: #fff; font-size: 12px; }
+
+        .result-display { 
+            font-size: 13px; word-break: break-all; letter-spacing: 5px; 
+            max-height: 60px; overflow-y: auto; padding: 12px; 
+            background: #050505; border-radius: 12px; text-align: center; 
+        }
+        .b-text { color: #ff4d4d; } .p-text { color: #3b82f6; } .t-text { color: #4ade80; }
+        .analyzing { font-style: italic; color: #00f2ff; animation: blink 1s infinite; font-size: 18px !important; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+
+<div class="game-view"><iframe src="https://fly88g.com/"></iframe></div>
+
+<div id="dragTool">
+    <img src="https://i.postimg.cc/rwkZQhxp/Robot.gif" class="robot-img" id="robotTrigger">
+    <div class="content-box" id="mainUI">
+        <div class="header-info">
+            <span>BÀN: <select id="tableSelect" onchange="onTableChange()"></select></span>
+            <span style="color: #00f2ff;"><i class="fas fa-microchip"></i> MATRIX INFINITY v10</span>
+        </div>
+        
+        <div class="prediction-panel">
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; color: #888;">
+                <span>PHIÊN: <b id="next_round" style="color:#fff">#--</b></span>
+                <span>Z-SCORE: <b id="z_val" style="color:#00f2ff">0.00</b></span>
+            </div>
+            <div id="prediction_val" class="analyzing">ĐANG KHỞI ĐỘNG AI...</div>
+            <div class="matrix-status">
+                <div class="status-item"><span class="status-label">Độ tin cậy</span><span class="status-val" id="markov_val">0%</span></div>
+                <div class="status-item"><span class="status-label">Thế Cầu</span><span class="status-val" id="pattern_val" style="color:#00f2ff">--</span></div>
+                <div class="status-item"><span class="status-label">Trạng thái</span><span class="status-val" id="advice_val">--</span></div>
+                <div class="status-item"><span class="status-label">Kelly Bet</span><span class="status-val" id="kelly_bet" style="color:#fbbf24">0%</span></div>
+            </div>
+        </div>
+        <div id="val_result" class="result-display">...</div>
+    </div>
+</div>
+
+<script>
+/**
+ * ULTRA-HYBRID INFINITY ENGINE v10.1
+ * Tích hợp 100% các loại cầu: Nhảy, Bệt, Khuông, Gương, Đảo Chiều, Nhạy.
+ */
+class InfinityEngine {
+    constructor() {
+        this.history = [];
+        this.markov = {};
+    }
+
+    setHistory(raw) {
+        this.history = raw.toUpperCase().replace(/[^BP]/g, '').split('');
+        this._buildMarkov();
+    }
+
+    _buildMarkov() {
+        this.markov = {};
+        for (let i = 0; i < this.history.length - 2; i++) {
+            let state = this.history[i] + this.history[i+1];
+            let next = this.history[i+2];
+            if (!this.markov[state]) this.markov[state] = { B: 0, P: 0 };
+            this.markov[state][next]++;
+        }
+    }
+
+    calculateZScore() {
+        let n = this.history.length;
+        if (n < 10) return 0;
+        let bCount = this.history.filter(x => x === 'B').length;
+        let expected = n * 0.506; 
+        let sd = Math.sqrt(n * 0.5 * 0.5);
+        return ((bCount - expected) / sd).toFixed(2);
+    }
+
+    checkPattern() {
+        const h = this.history.join("");
+        const last8 = h.slice(-8);
+        const last6 = h.slice(-6);
+        const last5 = h.slice(-5);
+        const last4 = h.slice(-4);
+        const last3 = h.slice(-3);
+
+        // --- 1. NHÓM CẦU NHẢY & NHẠY (JUMP/SENSITIVE) ---
+        if (last4 === "BPBP" || last6 === "BPBPBP") return { side: 'B', name: 'NHẢY 1-1' };
+        if (last4 === "PBPB" || last6 === "PBPBPB") return { side: 'P', name: 'NHẢY 1-1' };
+        if (last3 === "BBP") return { side: 'B', name: 'NHẠY 2-1' };
+        if (last3 === "PPB") return { side: 'P', name: 'NHẠY 2-1' };
+        if (last3 === "BPP") return { side: 'B', name: 'NHẠY 1-2' };
+        if (last3 === "PBB") return { side: 'P', name: 'NHẠY 1-2' };
+        if (last6 === "BBPPBB") return { side: 'P', name: 'NHẢY 2-2' };
+        if (last6 === "PPBBPP") return { side: 'B', name: 'NHẢY 2-2' };
+
+        // --- 2. NHÓM CẦU BỆT & RỒNG (DRAGON) ---
+        if (h.endsWith("BBBBB")) return { side: 'B', name: 'RỒNG BANKER' };
+        if (h.endsWith("PPPPP")) return { side: 'P', name: 'RỒNG PLAYER' };
+        if (h.endsWith("BBB")) return { side: 'B', name: 'THẾ BỆT' };
+        if (h.endsWith("PPP")) return { side: 'P', name: 'THẾ BỆT' };
+
+        // --- 3. NHÓM CẦU KHUÔNG & ĐỐI XỨNG (BOX/MIRROR) ---
+        if (last6 === "BBBPPP") return { side: 'B', name: 'KHUÔNG 3-3' };
+        if (last6 === "PPPBBB") return { side: 'P', name: 'KHUÔNG 3-3' };
+        if (last4 === "BPPB" || last4 === "PBBP") return { side: h.endsWith("B") ? 'P' : 'B', name: 'ĐỐI XỨNG' };
+        if (last6.slice(0,3) === "BPP" && last6.slice(3) === "PPB") return { side: 'B', name: 'GƯƠNG 3-3' };
+        if (last5 === "BBPBB" || last5 === "PPBPP") return { side: h.endsWith("B") ? 'P' : 'B', name: 'KHÉP GÓC' };
+
+        // --- 4. NHÓM CẦU ĐẢO CHIỀU & GÃY (REVERSAL) ---
+        if (h.slice(-5, -1) === "BBBB" && h.endsWith("P")) return { side: 'P', name: 'GÃY BỆT HỒI' };
+        if (h.slice(-5, -1) === "PPPP" && h.endsWith("B")) return { side: 'B', name: 'GÃY BỆT HỒI' };
+        if (last6 === "BBBPPB") return { side: 'B', name: 'THANG 3-2-1' };
+        if (last6 === "PPPBB P") return { side: 'P', name: 'THANG 3-2-1' };
+
+        // --- 5. PHÂN TÍCH NGHIÊNG XU HƯỚNG ---
+        let bCount = (h.match(/B/g) || []).length;
+        let pCount = (h.match(/P/g) || []).length;
+        if (h.length > 12) {
+            if (bCount > pCount + 4) return { side: 'B', name: 'NGHIÊNG CÁI' };
+            if (pCount > bCount + 4) return { side: 'P', name: 'NGHIÊNG CON' };
+        }
+
+        return { side: null, name: 'DÒ TÍN HIỆU' };
+    }
+
+    predict() {
+        if (this.history.length < 5) return null;
+
+        let lastTwo = this.history.slice(-2).join("");
+        let mk = this.markov[lastTwo] || { B: 0, P: 0 };
+        let mkTotal = mk.B + mk.P;
+        let pB = mkTotal > 0 ? (mk.B / mkTotal) : 0.5;
+
+        let z = parseFloat(this.calculateZScore());
+        if (z > 1.8) pB -= 0.16;
+        if (z < -1.8) pB += 0.16;
+
+        let pat = this.checkPattern();
+        if (pat.side === 'B') pB += 0.18;
+        if (pat.side === 'P') pB -= 0.18;
+
+        let resSide = pB >= 0.5 ? 'B' : 'P';
+        let conf = (resSide === 'B' ? pB : (1 - pB)) * 100;
+
+        let advice = "QUAN SÁT";
+        if (conf > 72) advice = "VÀO LỆNH";
+        if (conf > 88) advice = "CHỐT MẠNH";
+
+        return {
+            side: resSide,
+            decision: resSide === 'B' ? 'BANKER' : 'PLAYER',
+            confidence: Math.min(conf, 99.4).toFixed(1),
+            zScore: z,
+            pattern: pat.name,
+            advice: advice,
+            kelly: ((conf - 50) / 3.6).toFixed(1)
+        };
+    }
+}
+
+const ai = new InfinityEngine();
+let lastRaw = "";
+let currentTableName = "";
+
+async function update() {
+    try {
+        const sel = document.getElementById("tableSelect");
+        const selected = sel.value;
+        const ts = Date.now();
+        const apiTarget = `https://toolbcr.com/baccarat/tables.php?action=get_data&id=1&t=${ts}`;
+        const finalUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiTarget)}&_=${ts}`;
+
+        const response = await fetch(finalUrl);
+        const json = await response.json();
+        const data = JSON.parse(json.contents);
+        
+        if(sel.options.length === 0) {
+            sel.innerHTML = data.map(t => `<option value="${t.table_name}">${t.table_name}</option>`).join('');
+            currentTableName = sel.value;
+        }
+
+        const table = data.find(t => t.table_name === selected);
+        if (!table) return;
+
+        if (table.result !== lastRaw || currentTableName !== selected) {
+            currentTableName = selected;
+            lastRaw = table.result;
+            ai.setHistory(table.result);
+            
+            setTimeout(() => {
+                const res = ai.predict();
+                const v = document.getElementById("prediction_val");
+                const adv = document.getElementById("advice_val");
+                const patL = document.getElementById("pattern_val");
+
+                if(!res) { v.innerText = "CHỜ DỮ LIỆU"; return; }
+
+                v.innerText = res.decision;
+                v.style.color = res.decision === 'BANKER' ? '#ff4d4d' : '#3b82f6';
+                v.style.textShadow = `0 0 30px ${res.decision === 'BANKER' ? 'rgba(255,77,77,0.6)' : 'rgba(59,130,246,0.6)'}`;
+                
+                document.getElementById("markov_val").innerText = res.confidence + "%";
+                document.getElementById("z_val").innerText = res.zScore;
+                patL.innerText = res.pattern;
+
+                // Màu sắc nhấn mạnh theo loại cầu
+                if(res.pattern.includes("RỒNG") || res.pattern.includes("GÃY")) patL.style.color = "#ff00ff";
+                else if(res.pattern.includes("NHẢY") || res.pattern.includes("NHẠY")) patL.style.color = "#fbbf24";
+                else patL.style.color = "#00f2ff";
+
+                adv.innerText = res.advice;
+                if(res.advice === "CHỐT MẠNH") adv.style.color = "#ff00ff";
+                else adv.style.color = res.advice === "VÀO LỆNH" ? "#4ade80" : "#94a3b8";
+
+                document.getElementById("kelly_bet").innerText = (res.advice !== "QUAN SÁT" ? res.kelly : "0.0") + "%";
+                document.getElementById("next_round").innerText = "#" + (table.result.length + 1);
+                
+                document.getElementById("val_result").innerHTML = table.result.split('').map(c => {
+                    let cls = c === 'B' ? 'b-text' : (c === 'P' ? 'p-text' : 't-text');
+                    return `<span class="${cls}">${c}</span>`;
+                }).join(' ');
+            }, 600);
+        }
+    } catch(e) { console.log("AI Syncing..."); }
+}
+
+// Drag logic
+const tool = document.getElementById("dragTool");
+let active = false, ox, oy, curX = 0, curY = 0;
+tool.onpointerdown = e => { if(e.target.tagName !== 'SELECT') { active = true; ox = e.clientX - curX; oy = e.clientY - curY; }};
+document.onpointermove = e => { if(active) { curX = e.clientX - ox; curY = e.clientY - oy; tool.style.transform = `translate(${curX}px, ${curY}px)`; }};
+document.onpointerup = () => active = false;
+
+document.getElementById("robotTrigger").onclick = () => {
+    const box = document.getElementById("mainUI");
+    box.style.display = box.style.display === "none" ? "block" : "none";
+};
+
+function onTableChange() { 
+    lastRaw = ""; 
+    document.getElementById("prediction_val").innerHTML = `<span class="analyzing">KẾT NỐI BÀN...</span>`;
+    update(); 
+}
+
+setInterval(update, 3000);
+update();
+</script>
+</body>
+</html>
